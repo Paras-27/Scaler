@@ -67,6 +67,11 @@ const Home = () => {
             `${process.env.REACT_APP_API}/mentor/${selectedStudentName}`
           );
 
+          await axios.put(
+            `${process.env.REACT_APP_API}/student/updateMentor/${selectedStudentName}`,
+            { mentor: null }
+          );
+
           // Clear the marks
           setIdeation(0);
           setExecution(0);
@@ -247,10 +252,14 @@ const Home = () => {
                   </button>
                   <button
                     onClick={() => {
-                      // Select this student for update
+                      // Select this student for removal
                       setSelectedStudentId(student._id);
                       setSelectedStudentName(student.studentName);
-                      removeStudent();
+
+                      // Introduce a small delay to allow state updates to take effect
+                      setTimeout(() => {
+                        removeStudent();
+                      }, 100); // You can adjust the delay duration as needed
                     }}
                   >
                     Remove Student

@@ -71,5 +71,24 @@ router.put("/:id", async (req, res) => {
     res.status(500).json(err);
   }
 });
+router.put("/updateMentor/:stname", async (req, res) => {
+  try {
+    const studName = req.params.stname;
+    const updatedData = req.body;
+    console.log(updatedData.mentor);
+    const updatedStudent = await student.findOneAndUpdate(
+      { studentName: studName },
+      {
+        $set: {
+          mentor: updatedData.mentor,
+        },
+      },
+      { new: true }
+    );
+    res.status(200).json(updatedStudent);
+  } catch (err) {
+    res.status(500).json(err);
+  }
+});
 
 export default router;

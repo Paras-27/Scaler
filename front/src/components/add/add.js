@@ -7,18 +7,18 @@ const Addpage = () => {
   const [selectedStudentsId, setSelectedStudentsId] = useState([]);
   //   const [selectedStudentsName, setSelectedStudentsName] = useState([]);
 
+  const fetchUnassignedStudents = async () => {
+    const response = await axios.get(
+      `${process.env.REACT_APP_API}/student/unassigned/`
+    );
+    setUnassignedStudents(response.data);
+    //   console.log(response.data);
+  };
   useEffect(() => {
     // Fetch a list of students who are not assigned to "Mentor 1"
-    const fetchUnassignedStudents = async () => {
-      const response = await axios.get(
-        `${process.env.REACT_APP_API}/student/unassigned/`
-      );
-      setUnassignedStudents(response.data);
-      //   console.log(response.data);
-    };
 
     fetchUnassignedStudents();
-  });
+  }, []);
 
   const handleStudentSelect = (studentId) => {
     // Toggle the selection of a student
@@ -36,12 +36,6 @@ const Addpage = () => {
     const studentNamesToAdd = unassignedStudents
       .filter((student) => selectedStudentsId.includes(student._id))
       .map((student) => student.studentName);
-
-    console.log("unassignedStudents:", unassignedStudents);
-    console.log("selectedStudentsId:", selectedStudentsId);
-
-    // Debugging statement to check the content of studentNamesToAdd
-    console.log("studentNamesToAdd:", studentNamesToAdd);
 
     // Check the count of students assigned to "Mentor 1"
     const countResponse = await axios.get(
@@ -65,9 +59,22 @@ const Addpage = () => {
       } catch (error) {
         console.error("Error adding students to Mentor 1:", error);
       }
+
+      for (const studentName of studentNamesToAdd) {
+        try {
+          await axios.put(
+            `${process.env.REACT_APP_API}/student/updateMentor/${studentName}`,
+            { mentor: "Mentor 1" }
+          );
+          console.log("added mentor");
+        } catch (error) {
+          console.error(`Error updating mentor for ${studentName}:`, error);
+        }
+      }
+      fetchUnassignedStudents();
     } else {
       // Handle the case where the selected number of students is outside the allowed range
-      alert("You cannot add more than four students");
+      await alert("You cannot add more than four students");
     }
   };
 
