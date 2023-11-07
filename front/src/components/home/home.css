@@ -37,6 +37,11 @@
 
 }
 
+.submit-button{
+    display: flex;
+    justify-content: center;
+}
+
 .filter{
     margin:0px 45px;
 }
@@ -88,3 +93,40 @@ input:focus {
     position: relative;
     right: 67px;
 } */
+
+.add-main-heading{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 38px;
+    margin-bottom: 14px;
+    font-size: 30px;
+}
+
+.add-main-heading-2{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 25px;
+    margin-bottom: 24px;
+    font-size: 30px;
+}
+
+.checkbox {
+    width: 20px;
+    height: 20px;
+}
+
+.student-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 10px;
+}
+
+.add-button{
+    display: flex;
+    margin: auto;
+    margin-bottom: 21px;
+}

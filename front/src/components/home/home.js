@@ -1,46 +1,76 @@
 import React, { useEffect, useState } from "react";
 import "./home.css";
 import axios from "axios";
-import Addpage from "../add/add.js";
-// import { FaTrash } from "react-icons/fa";
 
 const Home = () => {
   const [studentsWithMarks, setStudentsWithMarks] = useState([]);
-  const [updateMode, setUpdateMode] = useState(false); // State to control update mode
+  const [updateMode, setUpdateMode] = useState(false);
+  const [lock, setLock] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [selectedStudentName, setSelectedStudentName] = useState(null);
   const [ideation, setIdeation] = useState(0);
   const [execution, setExecution] = useState(0);
   const [vivaPitch, setVivaPitch] = useState(0);
   const [filter, setFilter] = useState("all");
+  const [studentsWithAssignedMarks, setStudentsWithAssignedMarks] = useState(
+    []
+  );
+  const [unassignedStudents, setUnassignedStudents] = useState([]);
+  const [checkedStudentsId, setCheckedStudentsId] = useState([]);
 
+  useEffect(() => {
+    if (selectedStudentId !== null && selectedStudentName !== null) {
+      removeStudent();
+    }
+    // eslint-disable-next-line
+  }, [selectedStudentId, selectedStudentName]);
+
+  //function to get the students data for a mentor
   const getStudentsData = async () => {
     const mentorResponse = await axios.get(
       `${process.env.REACT_APP_API}/mentor`
     );
     const mentorData = mentorResponse.data;
 
-    // Extract the students associated with "Mentor 1"
-
     const students = mentorData.students;
 
     console.log(mentorData);
 
-    // Fetch marks information for each student
     const studentPromises = students.map((studentName) =>
       getStudentMarks(studentName)
     );
 
-    // Use Promise.all to wait for all requests to complete
     const studentsWithMarksData = await Promise.all(studentPromises);
-    console.log(studentsWithMarksData);
     setStudentsWithMarks(studentsWithMarksData);
+
+    const studentsWithMarksAssigned = studentsWithMarksData.filter(
+      (student) =>
+        student.marks.Ideation !== 0 ||
+        student.marks.Execution !== 0 ||
+        student.marks.Viva !== 0
+    );
+    // console.log(studentsWithMarksAssigned);
+    setStudentsWithAssignedMarks(studentsWithMarksAssigned);
   };
   useEffect(() => {
     getStudentsData();
     // eslint-disable-next-line
   }, []);
 
+  // function to lock the students data
+  const handleLockClick = () => {
+    console.log(studentsWithMarks);
+    console.log(studentsWithAssignedMarks);
+    if (studentsWithMarks.length === studentsWithAssignedMarks.length) {
+      setLock(true);
+      console.log(lock);
+      alert("Data Submitted Succesfully");
+    } else {
+      alert("Cannot submit. There are students with unassigned marks.");
+    }
+  };
+
+  //fetch marks of all the students
   const getStudentMarks = async (studentName) => {
     const studentResponse = await axios.get(
       `${process.env.REACT_APP_API}/student/${studentName}`
@@ -48,9 +78,10 @@ const Home = () => {
     return studentResponse.data;
   };
 
+  //remove a student from mentor's list
   const removeStudent = async () => {
-    console.log(selectedStudentName);
-    console.log(selectedStudentId);
+    // console.log(selectedStudentName);
+    // console.log(selectedStudentId);
     if (selectedStudentName) {
       const count = await axios.get(
         `${process.env.REACT_APP_API}/mentor/count`
@@ -62,7 +93,6 @@ const Home = () => {
         );
       } else {
         try {
-          // Send a request to remove the student from the mentor
           await axios.delete(
             `${process.env.REACT_APP_API}/mentor/${selectedStudentName}`
           );
@@ -85,7 +115,7 @@ const Home = () => {
 
           try {
             const response = await axios.put(
-              `${process.env.REACT_APP_API}/student/${selectedStudentId}`, // Use the selected student's ID
+              `${process.env.REACT_APP_API}/student/${selectedStudentId}`,
               updatedStudent
             );
             console.log("Student marks updated:", response.data);
@@ -96,8 +126,8 @@ const Home = () => {
             console.error("Error updating student marks:", error);
           }
 
-          // Update the UI by re-fetching the students' data
           getStudentsData();
+          fetchUnassignedStudents();
         } catch (error) {
           console.error("Error removing student:", error);
         }
@@ -107,6 +137,7 @@ const Home = () => {
     }
   };
 
+  //Update the students marks
   const updateStudentMarks = async () => {
     if (selectedStudentId) {
       const updatedStudent = {
@@ -138,6 +169,7 @@ const Home = () => {
     }
   };
 
+  // get the total marks of a single student
   function getTotalMarks(marks) {
     if (
       marks &&
@@ -155,6 +187,7 @@ const Home = () => {
     setFilter(newFilter);
   };
 
+  // filter for student having marks assingned and not asiigned
   const filteredStudents = studentsWithMarks.filter((student) => {
     if (filter === "assigned") {
       return (
@@ -171,6 +204,74 @@ const Home = () => {
     }
     return true;
   });
+
+  const fetchUnassignedStudents = async () => {
+    const response = await axios.get(
+      `${process.env.REACT_APP_API}/student/unassigned/`
+    );
+    setUnassignedStudents(response.data);
+    //   console.log(response.data);
+  };
+  useEffect(() => {
+    fetchUnassignedStudents();
+  }, []);
+
+  const handleStudentSelect = (studentId) => {
+    // Toggle the selection of a student
+    if (checkedStudentsId.includes(studentId)) {
+      setCheckedStudentsId(checkedStudentsId.filter((id) => id !== studentId));
+    } else {
+      setCheckedStudentsId([...checkedStudentsId, studentId]);
+    }
+  };
+
+  const handleAddStudents = async () => {
+    // Create an array of student names for the selected students
+    const studentNamesToAdd = unassignedStudents
+      .filter((student) => checkedStudentsId.includes(student._id))
+      .map((student) => student.studentName);
+
+    // Check the count of students assigned to "Mentor 1"
+    const countResponse = await axios.get(
+      `${process.env.REACT_APP_API}/mentor/count`
+    );
+    const studentCount = countResponse.data;
+
+    // Check if the number of selected students is within the allowed range
+    if (
+      studentCount + studentNamesToAdd.length >= 3 &&
+      studentCount + studentNamesToAdd.length <= 4
+    ) {
+      // Send a POST request to add the selected students to "Mentor 1"
+      try {
+        console.log(studentNamesToAdd);
+        await axios.put(`${process.env.REACT_APP_API}/mentor/addStudents`, {
+          studentNamesToAdd,
+        });
+        // Handle successful addition (you can show a success message, etc.)
+        console.log("Students added to Mentor 1.");
+      } catch (error) {
+        console.error("Error adding students to Mentor 1:", error);
+      }
+
+      for (const studentName of studentNamesToAdd) {
+        try {
+          await axios.put(
+            `${process.env.REACT_APP_API}/student/updateMentor/${studentName}`,
+            { mentor: "Mentor 1" }
+          );
+          console.log("added mentor");
+        } catch (error) {
+          console.error(`Error updating mentor for ${studentName}:`, error);
+        }
+      }
+    } else {
+      // Handle the case where the selected number of students is outside the allowed range
+      await alert("You cannot add more than four students");
+    }
+    fetchUnassignedStudents();
+    getStudentsData();
+  };
 
   return (
     <div className="home">
@@ -240,26 +341,23 @@ const Home = () => {
                   <p>Total-Marks: {getTotalMarks(student.marks)}</p>
                 </div>
                 <div className="edit-icon">
-                  <button
-                    className="edit-button"
-                    onClick={() => {
-                      // Select this student for update
-                      setUpdateMode(true);
-                      setSelectedStudentId(student._id);
-                    }}
-                  >
-                    Edit Marks
-                  </button>
+                  {!lock && (
+                    <button
+                      className="edit-button"
+                      onClick={() => {
+                        // Select this student for update
+                        setUpdateMode(true);
+                        setSelectedStudentId(student._id);
+                      }}
+                    >
+                      Edit Marks
+                    </button>
+                  )}
                   <button
                     onClick={() => {
                       // Select this student for removal
                       setSelectedStudentId(student._id);
                       setSelectedStudentName(student.studentName);
-
-                      // Introduce a small delay to allow state updates to take effect
-                      setTimeout(() => {
-                        removeStudent();
-                      }, 100); // You can adjust the delay duration as needed
                     }}
                   >
                     Remove Student
@@ -270,7 +368,31 @@ const Home = () => {
           </li>
         ))}
       </ul>
-      <Addpage />
+      <div className="submit-button">
+        <button onClick={handleLockClick}>Submit Marks</button>
+      </div>
+      <div>
+        <h1 className="add-main-heading">Add Students to Mentor 1</h1>
+        <p className="add-main-heading-2">Select students to add:</p>
+        <ul>
+          {unassignedStudents.map((student) => (
+            <li key={student._id}>
+              <div class="student-container">
+                <span class="student-name">{student.studentName}</span>
+                <input
+                  type="checkbox"
+                  class="checkbox"
+                  checked={checkedStudentsId.includes(student._id)}
+                  onChange={() => handleStudentSelect(student._id)}
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
+        <button className="add-button" onClick={handleAddStudents}>
+          Add Selected Students
+        </button>
+      </div>
     </div>
   );
 };
